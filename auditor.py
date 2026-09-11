@@ -1,4 +1,4 @@
-# Initialize state tracking variables
+# Initialize variables
 inventory = 0
 
 while True:
@@ -16,7 +16,7 @@ while True:
     # Convert valid input string to an integer
     stock = int(user_input)
 
-    # Business rule validation and state updating
+    # Checking for negative numbers
     if stock < 0:
         print("Error: Negative numbers are not allowed.")
     else:
