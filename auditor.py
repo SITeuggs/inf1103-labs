@@ -1,16 +1,30 @@
+# Initialize state tracking variables
 inventory = 0
-stock = 0
-user_quit = True
 
-while user_quit:
-    stock = input("Enter the stock Quantity: ")
-    if stock != int or int(stock) < 0:
-        print("Enter a valid number.")
+while True:
+    user_input = input("Enter a stock quantity (or 'quit' to exit): ").strip()
+
+    # Check for quit command (case-insensitive)
+    if user_input.lower() == "quit":
+        break
+
+    # Validate if input consists only of digits (handles non-integers and negative signs)
+    if not user_input.isdigit():
+        print("Error: Invalid input. Please enter a positive whole number.")
+        continue
+
+    # Convert valid input string to an integer
+    stock = int(user_input)
+
+    # Business rule validation and state updating
+    if stock < 0:
+        print("Error: Negative numbers are not allowed.")
     else:
         inventory += stock
-        if stock > 500:
-            print("ALERT! More than 500 stock.")
+        print(f"Added {stock} units. Current Total: {inventory}")
+
+        # Trigger alert and break if inventory exceeds 500
+        if inventory > 500:
+            print("ALERT! Inventory limit exceeded 500 units.")
             break
-    user_quit = input("Do you want to quit? (Yes or No): ")
-    if user_quit == "Yes":
-        user_quit = False
+
