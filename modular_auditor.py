@@ -20,19 +20,22 @@ def get_valid_input():
 
 # Function to calculate the new total and return it
 def process_delivery(current_total, new_value):
-    """Adds the new delivery to the current inventory total."""
     new_total = current_total + new_value
     return new_total
 
 # Function to calculate tax
 def calculate_tax(amount):
-    """Calculates 10% tax on a delivery amount."""
     tax = amount * 0.10
     return tax
 
+# Function to print out the current report
+def generate_report(stock, tax, inventory):
+    print(f"Added {stock} units.")
+    print(f"Tax on this delivery: ${tax:.2f}")
+    print(f"Current Total: {inventory}")
+
 # Function to generate the final summary
-def generate_report(total_units):
-    """Prints the final inventory summary."""
+def generate_report_summary(total_units):
     print("\n===== FINAL REPORT =====")
     print(f"Total inventory units: {total_units}")
     print("========================")
@@ -40,3 +43,26 @@ def generate_report(total_units):
 # Initialize variables
 inventory = 0
 
+while True:
+    stock = get_valid_input()
+
+    # Check if user wants to quit
+    if stock == "quit":
+        break
+
+    # Calculate tax for this specific delivery
+    tax = calculate_tax(stock)
+
+    # Add delivery to inventory
+    inventory = process_delivery(inventory, stock)
+
+    # Generates the current report
+    generate_report(stock, tax, inventory)
+
+    # Check inventory limit
+    if inventory > 500:
+        print("ALERT! Inventory limit exceeded 500 units.")
+        break
+
+# Generate final report
+generate_report_summary(inventory)
