@@ -1,6 +1,3 @@
-# Initialize variables
-inventory = 0
-
 # Function to get user input and check its validity
 def get_valid_input():
     while True:
@@ -32,4 +29,14 @@ def calculate_tax(amount):
     """Calculates 10% tax on a delivery amount."""
     tax = amount * 0.10
     return tax
+
+# Function to generate the final summary
+def generate_report(total_units):
+    """Prints the final inventory summary."""
+    print("\n===== FINAL REPORT =====")
+    print(f"Total inventory units: {total_units}")
+    print("========================")
+
+# Initialize variables
+inventory = 0
 
