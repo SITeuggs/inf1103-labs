@@ -21,13 +21,15 @@ def get_valid_input():
         # Return the valid integer
         return stock
 
-while True:
-    stock = get_valid_input()
+# Function to calculate the new total and return it
+def process_delivery(current_total, new_value):
+    """Adds the new delivery to the current inventory total."""
+    new_total = current_total + new_value
+    return new_total
 
-    #Checks if user wants to quit
-    if stock == "quit":
-        break
-
-    total_stock = total_stock + stock
-    print(total_stock)
+# Function to calculate tax
+def calculate_tax(amount):
+    """Calculates 10% tax on a delivery amount."""
+    tax = amount * 0.10
+    return tax
 
