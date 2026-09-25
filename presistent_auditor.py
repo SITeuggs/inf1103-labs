@@ -1,3 +1,34 @@
+# Function to load inventory information from file
+def load_inventory():
+    try:
+        with open("inventory.txt", "r") as file:
+            lines = file.readlines()
+
+            # First line contains the inventory total
+            inventory = int(lines[0].strip())
+
+            # Remaining lines contain transaction history
+            transaction_history = []
+
+            for line in lines[1:]:
+                transaction_history.append(int(line.strip()))
+
+            return inventory, transaction_history
+
+    except FileNotFoundError:
+        # If the file does not exist, start with an empty inventory
+        return 0, []
+    
+# Function to save inventory information to file
+def save_inventory(inventory, transaction_history):
+    with open("inventory.txt", "w") as file:
+        # Save the final inventory total
+        file.write(str(inventory) + "\n")
+
+        # Save each transaction
+        for transaction in transaction_history:
+            file.write(str(transaction) + "\n")
+
 # Function to get user input and check its validity
 def get_valid_input():
     while True:
@@ -40,15 +71,25 @@ def generate_report_summary(total_units):
     print(f"Total inventory units: {total_units}")
     print("========================")
 
-# Initialize variables
-inventory = 0
+# Load previously saved inventory and transaction history
+inventory, transaction_history = load_inventory()
 
+# Print the previous inventory
+print(f"Previous inventory: {inventory} units")
+
+#Main Program
 while True:
     stock = get_valid_input()
 
     # Check if user wants to quit
     if stock == "quit":
+        # Save inventory and transaction history before exiting
+        save_inventory(inventory, transaction_history)
+        print("Inventory and transaction history saved.")
         break
+
+    # Store valid transaction in history list
+    transaction_history.append(stock)
 
     # Calculate tax for this specific delivery
     tax = calculate_tax(stock)
