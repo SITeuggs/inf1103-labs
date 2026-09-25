@@ -1,3 +1,25 @@
+# Function to load inventory information from file
+def load_inventory():
+    try:
+        with open("inventory.txt", "r") as file:
+            lines = file.readlines()
+
+            # First line contains the inventory total
+            inventory = int(lines[0].strip())
+
+            # Remaining lines contain transaction history
+            transaction_history = []
+
+            for line in lines[1:]:
+                transaction_history.append(int(line.strip()))
+
+            return inventory, transaction_history
+
+    except FileNotFoundError:
+        # If the file does not exist, start with an empty inventory
+        return 0, []
+
+
 # Function to get user input and check its validity
 def get_valid_input():
     while True:
