@@ -79,4 +79,40 @@ class Inventory:
         """Convert all products to a list of dictionaries for saving."""
         return [product.to_dict() for product in self.__products]
 
+def create_default_inventory():
+    """Create an inventory filled with the default sample products."""
+    inventory = Inventory()
+    inventory.add_product(Product("P001", "Laptop", 1200.00, 15))
+    inventory.add_product(Product("P002", "Mouse", 25.50, 40))
+    inventory.add_product(Product("P003", "Keyboard", 45.00, 25))
+    return inventory
 
+
+def load_inventory():
+    """Load inventory from JSON file if it exists; otherwise load default initial data."""
+    if not os.path.exists(FILE_NAME):
+        print(f"{FILE_NAME} not found. Starting with default inventory.")
+        return create_default_inventory()
+
+    print(f"{FILE_NAME} found.")
+    try:
+        with open(FILE_NAME, "r") as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        print("Error reading file. Starting with default inventory.")
+        return create_default_inventory()
+
+    inventory = Inventory()
+    for item in data:
+        inventory.add_product(Product(item["id"], item["name"], item["price"], item["stock"]))
+    print("Inventory loaded successfully.")
+    return inventory
+
+
+def save_inventory(inventory, show_message=True):
+    """Save the inventory to inventory.json."""
+    if show_message:
+        print("Saving inventory...")
+    with open(FILE_NAME, "w") as f:
+        json.dump(inventory.to_list(), f, indent=4)
+    print("Inventory saved successfully to inventory.json.")
