@@ -1,5 +1,5 @@
 """Lab 7 tests: run with `python test_products.py`."""
-from oop_inventory_manager import Product, PhysicalProduct, DigitalProduct
+from oop_inventory_manager import Product, PhysicalProduct, DigitalProduct, CanBeShipped
 
 
 def test_physical_product():
@@ -46,9 +46,27 @@ def test_abstract_product():
     print()
 
 
+def test_shipping_cost():
+    print("Step 4.2 - calculate_shipping_cost() with different weights")
+    products = [
+        PhysicalProduct("P200", "USB Cable", 9.99, 100, 0.05),
+        PhysicalProduct("P201", "Guitar", 350.00, 5, 3.5),
+        PhysicalProduct("P202", "Office Chair", 180.00, 8, 15.0),
+    ]
+    for product in products:
+        print(f"{product.get_name()} ({product.get_weight()} kg): "
+              f"shipping ${product.calculate_shipping_cost():.2f}")
+
+    os_product = DigitalProduct("D100", "Operating System", 139.99, 100, 4500)
+    print(f"Is the Guitar CanBeShipped?           {isinstance(products[1], CanBeShipped)}")
+    print(f"Is the Operating System CanBeShipped? {isinstance(os_product, CanBeShipped)}")
+    print()
+
+
 if __name__ == "__main__":
     test_physical_product()
     test_digital_product()
     test_method_overriding()
     test_fulfilment_info()
     test_abstract_product()
+    test_shipping_cost()

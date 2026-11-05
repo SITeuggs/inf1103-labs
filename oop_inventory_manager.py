@@ -53,8 +53,21 @@ class Product(ABC):
         pass
 
 
-class PhysicalProduct(Product):
-    """A product that physically exists and has a weight (in kg)."""
+class CanBeShipped(ABC):
+    """Interface: any class that signs this contract must be able to calculate a shipping cost."""
+
+    @abstractmethod
+    def calculate_shipping_cost(self):
+        """Return the cost of shipping this object."""
+        pass
+
+
+class PhysicalProduct(Product, CanBeShipped):
+    """A product that physically exists and has a weight (in kg).
+    Inherits from Product (is-a) and implements the CanBeShipped interface."""
+
+    BASE_SHIPPING_FEE = 5.00   # flat fee per shipment
+    COST_PER_KG = 2.00         # extra charge for each kg
 
     def __init__(self, product_id, name, price, stock, weight):
         super().__init__(product_id, name, price, stock)
@@ -62,6 +75,10 @@ class PhysicalProduct(Product):
 
     def get_weight(self):
         return self.__weight
+
+    def calculate_shipping_cost(self):
+        """Shipping cost = flat fee + cost per kg * weight."""
+        return self.BASE_SHIPPING_FEE + self.COST_PER_KG * self.__weight
 
     def get_fulfilment_info(self):
         return f"{self.get_name()} requires physical shipping ({self.__weight} kg)."
