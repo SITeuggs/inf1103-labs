@@ -16,6 +16,18 @@ def test_digital_product():
     print()
 
 
+def test_method_overriding():
+    print("Step 2.2 - Method overriding (parent info + child info)")
+    products = [
+        PhysicalProduct("P101", "Desk Lamp", 39.90, 12, 1.2),
+        DigitalProduct("D101", "Photo Editor", 59.00, 50, 850),
+    ]
+    for product in products:
+        product.display_information()
+    print()
+
+
 if __name__ == "__main__":
     test_physical_product()
     test_digital_product()
+    test_method_overriding()

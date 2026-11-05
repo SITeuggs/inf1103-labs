@@ -58,9 +58,9 @@ class PhysicalProduct(Product):
         return self.__weight
 
     def display_information(self):
-        """Display this physical product's details, including its weight."""
-        print(f"ID: {self.get_product_id()} | Name: {self.get_name()} | Price: ${self.get_price():.2f} "
-              f"| Stock: {self.get_stock()} | Weight: {self.__weight} kg")
+        """Display the common product details (from Product), then the weight."""
+        super().display_information()
+        print(f"    Type: Physical | Weight: {self.__weight} kg")
 
 
 class DigitalProduct(Product):
@@ -74,9 +74,9 @@ class DigitalProduct(Product):
         return self.__download_size
 
     def display_information(self):
-        """Display this digital product's details, including its download size."""
-        print(f"ID: {self.get_product_id()} | Name: {self.get_name()} | Price: ${self.get_price():.2f} "
-              f"| Stock: {self.get_stock()} | Download Size: {self.__download_size} MB")
+        """Display the common product details (from Product), then the download size."""
+        super().display_information()
+        print(f"    Type: Digital | Download Size: {self.__download_size} MB")
 
 
 class Inventory:
