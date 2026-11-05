@@ -46,6 +46,39 @@ class Product:
             "stock": self.__stock
         }
 
+
+class PhysicalProduct(Product):
+    """A product that physically exists and has a weight (in kg)."""
+
+    def __init__(self, product_id, name, price, stock, weight):
+        super().__init__(product_id, name, price, stock)
+        self.__weight = weight
+
+    def get_weight(self):
+        return self.__weight
+
+    def display_information(self):
+        """Display this physical product's details, including its weight."""
+        print(f"ID: {self.get_product_id()} | Name: {self.get_name()} | Price: ${self.get_price():.2f} "
+              f"| Stock: {self.get_stock()} | Weight: {self.__weight} kg")
+
+
+class DigitalProduct(Product):
+    """A product delivered digitally, with a download size (in MB)."""
+
+    def __init__(self, product_id, name, price, stock, download_size):
+        super().__init__(product_id, name, price, stock)
+        self.__download_size = download_size
+
+    def get_download_size(self):
+        return self.__download_size
+
+    def display_information(self):
+        """Display this digital product's details, including its download size."""
+        print(f"ID: {self.get_product_id()} | Name: {self.get_name()} | Price: ${self.get_price():.2f} "
+              f"| Stock: {self.get_stock()} | Download Size: {self.__download_size} MB")
+
+
 class Inventory:
     """Manages a collection of Product objects."""
 
