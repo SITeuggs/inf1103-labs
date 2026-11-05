@@ -1,11 +1,12 @@
 import json
 import os
+from abc import ABC, abstractmethod
 
 FILE_NAME = "inventory.json"
 
 
-class Product:
-    """Represents and manages a single product."""
+class Product(ABC):
+    """Abstract base class for all products. Cannot be instantiated directly."""
 
     def __init__(self, product_id, name, price, stock):
         self.__product_id = product_id
@@ -46,6 +47,11 @@ class Product:
             "stock": self.__stock
         }
 
+    @abstractmethod
+    def get_fulfilment_info(self):
+        """Return a message describing how this product is delivered to the customer."""
+        pass
+
 
 class PhysicalProduct(Product):
     """A product that physically exists and has a weight (in kg)."""
@@ -56,6 +62,9 @@ class PhysicalProduct(Product):
 
     def get_weight(self):
         return self.__weight
+
+    def get_fulfilment_info(self):
+        return f"{self.get_name()} requires physical shipping ({self.__weight} kg)."
 
     def display_information(self):
         """Display the common product details (from Product), then the weight."""
@@ -72,6 +81,9 @@ class DigitalProduct(Product):
 
     def get_download_size(self):
         return self.__download_size
+
+    def get_fulfilment_info(self):
+        return f"{self.get_name()} is delivered digitally via download link ({self.__download_size} MB)."
 
     def display_information(self):
         """Display the common product details (from Product), then the download size."""
@@ -115,9 +127,9 @@ class Inventory:
 def create_default_inventory():
     """Create an inventory filled with the default sample products."""
     inventory = Inventory()
-    inventory.add_product(Product("P001", "Laptop", 1200.00, 15))
-    inventory.add_product(Product("P002", "Mouse", 25.50, 40))
-    inventory.add_product(Product("P003", "Keyboard", 45.00, 25))
+    inventory.add_product(PhysicalProduct("P001", "Laptop", 1200.00, 15, 2.0))
+    inventory.add_product(PhysicalProduct("P002", "Mouse", 25.50, 40, 0.1))
+    inventory.add_product(PhysicalProduct("P003", "Keyboard", 45.00, 25, 0.8))
     return inventory
 
 
@@ -137,7 +149,9 @@ def load_inventory():
 
     inventory = Inventory()
     for item in data:
-        inventory.add_product(Product(item["id"], item["name"], item["price"], item["stock"]))
+        # Temporary until Step 5: products without a saved type are loaded as physical products
+        inventory.add_product(PhysicalProduct(item["id"], item["name"], item["price"], item["stock"],
+                                              item.get("weight", 0.0)))
     print("Inventory loaded successfully.")
     return inventory
 
@@ -172,7 +186,8 @@ def add_product_menu(inventory):
         print("Invalid input. Price and stock cannot be negative.")
         return
 
-    inventory.add_product(Product(prod_id, name, price, stock))
+    # Temporary until Step 5: new products are added as physical products
+    inventory.add_product(PhysicalProduct(prod_id, name, price, stock, 0.0))
     print("Product added successfully!")
 
 
