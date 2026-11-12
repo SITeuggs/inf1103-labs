@@ -1,11 +1,12 @@
 import json
 import os
+from abc import ABC, abstractmethod
 
 FILE_NAME = "inventory.json"
 
 
-class Product:
-    """Represents and manages a single product."""
+class Product(ABC):
+    """Abstract base class for all products. Cannot be instantiated directly."""
 
     def __init__(self, product_id, name, price, stock):
         self.__product_id = product_id
@@ -46,6 +47,81 @@ class Product:
             "stock": self.__stock
         }
 
+    @abstractmethod
+    def get_fulfilment_info(self):
+        """Return a message describing how this product is delivered to the customer."""
+        pass
+
+
+class CanBeShipped(ABC):
+    """Interface: any class that signs this contract must be able to calculate a shipping cost."""
+
+    @abstractmethod
+    def calculate_shipping_cost(self):
+        """Return the cost of shipping this object."""
+        pass
+
+
+class PhysicalProduct(Product, CanBeShipped):
+    """A product that physically exists and has a weight (in kg).
+    Inherits from Product (is-a) and implements the CanBeShipped interface."""
+
+    BASE_SHIPPING_FEE = 5.00   # flat fee per shipment
+    COST_PER_KG = 2.00         # extra charge for each kg
+
+    def __init__(self, product_id, name, price, stock, weight):
+        super().__init__(product_id, name, price, stock)
+        self.__weight = weight
+
+    def get_weight(self):
+        return self.__weight
+
+    def calculate_shipping_cost(self):
+        """Shipping cost = flat fee + cost per kg * weight."""
+        return self.BASE_SHIPPING_FEE + self.COST_PER_KG * self.__weight
+
+    def get_fulfilment_info(self):
+        return f"{self.get_name()} requires physical shipping ({self.__weight} kg)."
+
+    def display_information(self):
+        """Display the common product details (from Product), then the weight."""
+        super().display_information()
+        print(f"    Type: Physical | Weight: {self.__weight} kg")
+
+    def to_dict(self):
+        """Reuse Product's dictionary, then add the type and weight."""
+        data = super().to_dict()
+        data["type"] = "physical"
+        data["weight"] = self.__weight
+        return data
+
+
+class DigitalProduct(Product):
+    """A product delivered digitally, with a download size (in MB)."""
+
+    def __init__(self, product_id, name, price, stock, download_size):
+        super().__init__(product_id, name, price, stock)
+        self.__download_size = download_size
+
+    def get_download_size(self):
+        return self.__download_size
+
+    def get_fulfilment_info(self):
+        return f"{self.get_name()} is delivered digitally via download link ({self.__download_size} MB)."
+
+    def display_information(self):
+        """Display the common product details (from Product), then the download size."""
+        super().display_information()
+        print(f"    Type: Digital | Download Size: {self.__download_size} MB")
+
+    def to_dict(self):
+        """Reuse Product's dictionary, then add the type and download size."""
+        data = super().to_dict()
+        data["type"] = "digital"
+        data["download_size"] = self.__download_size
+        return data
+
+
 class Inventory:
     """Manages a collection of Product objects."""
 
@@ -82,10 +158,24 @@ class Inventory:
 def create_default_inventory():
     """Create an inventory filled with the default sample products."""
     inventory = Inventory()
-    inventory.add_product(Product("P001", "Laptop", 1200.00, 15))
-    inventory.add_product(Product("P002", "Mouse", 25.50, 40))
-    inventory.add_product(Product("P003", "Keyboard", 45.00, 25))
+    inventory.add_product(PhysicalProduct("P001", "Laptop", 1200.00, 15, 2.0))
+    inventory.add_product(PhysicalProduct("P002", "Mouse", 25.50, 40, 0.1))
+    inventory.add_product(PhysicalProduct("P003", "Keyboard", 45.00, 25, 0.8))
+    inventory.add_product(DigitalProduct("D001", "Antivirus Software", 49.99, 100, 350))
     return inventory
+
+
+def product_from_dict(item):
+    """Create the correct Product subclass from a saved dictionary, using its "type" field.
+    Records saved before Lab 7 have no type, so they are treated as physical products."""
+    product_type = item.get("type", "physical")
+    if product_type == "physical":
+        return PhysicalProduct(item["id"], item["name"], item["price"], item["stock"],
+                               item.get("weight", 0.0))
+    if product_type == "digital":
+        return DigitalProduct(item["id"], item["name"], item["price"], item["stock"],
+                              item.get("download_size", 0.0))
+    raise ValueError(f"Unknown product type: {product_type}")
 
 
 def load_inventory():
@@ -104,18 +194,21 @@ def load_inventory():
 
     inventory = Inventory()
     for item in data:
-        inventory.add_product(Product(item["id"], item["name"], item["price"], item["stock"]))
+        try:
+            inventory.add_product(product_from_dict(item))
+        except (KeyError, ValueError) as error:
+            print(f"Skipping invalid product record ({error}).")
     print("Inventory loaded successfully.")
     return inventory
 
 
 def save_inventory(inventory, show_message=True):
-    """Save the inventory to inventory.json."""
+    """Save the inventory to the JSON file (FILE_NAME)."""
     if show_message:
         print("Saving inventory...")
     with open(FILE_NAME, "w") as f:
         json.dump(inventory.to_list(), f, indent=4)
-    print("Inventory saved successfully to inventory.json.")
+    print(f"Inventory saved successfully to {FILE_NAME}.")
 
 # Main Program
 def add_product_menu(inventory):
@@ -127,19 +220,36 @@ def add_product_menu(inventory):
         print("Error: Product ID already exists.")
         return
 
+    print("Product Type:")
+    print("1. Physical Product")
+    print("2. Digital Product")
+    type_choice = input("Choose type (1-2): ").strip()
+    if type_choice not in ("1", "2"):
+        print("Invalid product type.")
+        return
+
     name = input("Product Name: ").strip()
     try:
         price = float(input("Price: "))
         stock = int(input("Stock Quantity: "))
+        if type_choice == "1":
+            extra = float(input("Weight (kg): "))
+        else:
+            extra = float(input("Download Size (MB): "))
     except ValueError:
-        print("Invalid input. Price must be a number and stock must be an integer.")
+        print("Invalid input. Price, weight and download size must be numbers, and stock must be an integer.")
         return
 
-    if price < 0 or stock < 0:
-        print("Invalid input. Price and stock cannot be negative.")
+    if price < 0 or stock < 0 or extra < 0:
+        print("Invalid input. Values cannot be negative.")
         return
 
-    inventory.add_product(Product(prod_id, name, price, stock))
+    if type_choice == "1":
+        product = PhysicalProduct(prod_id, name, price, stock, extra)
+    else:
+        product = DigitalProduct(prod_id, name, price, stock, extra)
+
+    inventory.add_product(product)
     print("Product added successfully!")
 
 
@@ -178,10 +288,10 @@ def search_product_menu(inventory):
 
     print("\nProduct Found")
     print("-" * 40)
-    print(f"ID: {product.get_product_id()}")
-    print(f"Name: {product.get_name()}")
-    print(f"Price: ${product.get_price():.2f}")
-    print(f"Stock: {product.get_stock()}")
+    product.display_information()
+    print(f"Fulfilment: {product.get_fulfilment_info()}")
+    if isinstance(product, CanBeShipped):
+        print(f"Shipping Cost: ${product.calculate_shipping_cost():.2f}")
     print("-" * 40)
 
 

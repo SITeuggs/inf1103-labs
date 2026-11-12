@@ -1,11 +1,15 @@
-"""Lab 7 tests: run with `python test_products.py`.
+"""Lab 7 tests: run from the project folder with `python tests/test_products.py`.
 
 Each test matches one item from the Lab 7 "Testing and review" checklist (section 7).
 Tests print their output so you can see the behaviour, and use assert so a failure is reported.
 """
 import json
 import os
+import sys
 import tempfile
+
+# Let this file (inside tests/) import modules from the project folder above it
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import oop_inventory_manager as manager
 from oop_inventory_manager import (
