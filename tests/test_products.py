@@ -21,16 +21,16 @@ from oop_inventory_manager import (
 TEST_SUPPLIER = Supplier("S100", "Acme Supplies", "sales@acme.com")
 
 
-def make_guitar():
+def make_guitar() -> PhysicalProduct:
     return PhysicalProduct("P100", "Guitar", 350.00, 5, TEST_SUPPLIER, 3.5)
 
 
-def make_os():
+def make_os() -> DigitalProduct:
     return DigitalProduct("D100", "Operating System", 139.99, 100, TEST_SUPPLIER, 4500)
 
 
 # 1. Physical products store and display their weights
-def test_physical_weight():
+def test_physical_weight() -> None:
     guitar = make_guitar()
     guitar.display_information()
     assert guitar.get_weight() == 3.5
@@ -39,7 +39,7 @@ def test_physical_weight():
 
 
 # 2. Digital products store and display their download sizes
-def test_digital_download_size():
+def test_digital_download_size() -> None:
     os_product = make_os()
     os_product.display_information()
     assert os_product.get_download_size() == 4500
@@ -47,7 +47,7 @@ def test_digital_download_size():
 
 
 # 3. Both subclasses implement get_fulfilment_info()
-def test_fulfilment_info():
+def test_fulfilment_info() -> None:
     guitar, os_product = make_guitar(), make_os()
     print(guitar.get_fulfilment_info())
     print(os_product.get_fulfilment_info())
@@ -56,9 +56,10 @@ def test_fulfilment_info():
 
 
 # 4. The abstract Product class cannot be instantiated directly
-def test_product_is_abstract():
+def test_product_is_abstract() -> None:
     try:
-        Product("X001", "Generic Thing", 10.00, 1, TEST_SUPPLIER)
+        # Deliberately wrong (this test checks it fails), so tell the type checker to ignore it
+        Product("X001", "Generic Thing", 10.00, 1, TEST_SUPPLIER)  # type: ignore[abstract]
     except TypeError as error:
         print(f"TypeError (expected): {error}")
     else:
@@ -66,7 +67,7 @@ def test_product_is_abstract():
 
 
 # 5. Physical products can calculate shipping costs (rule: $5.00 + $2.00 per kg)
-def test_shipping_cost():
+def test_shipping_cost() -> None:
     for weight, expected in [(0.05, 5.10), (3.5, 12.00), (15.0, 35.00)]:
         product = PhysicalProduct("P1", "Item", 10.0, 1, TEST_SUPPLIER, weight)
         cost = product.calculate_shipping_cost()
@@ -76,7 +77,7 @@ def test_shipping_cost():
 
 
 # 6. Digital products are not required to implement shipping behaviour
-def test_digital_not_shippable():
+def test_digital_not_shippable() -> None:
     os_product = make_os()
     assert not isinstance(os_product, CanBeShipped)
     assert not hasattr(os_product, "calculate_shipping_cost")
@@ -84,7 +85,7 @@ def test_digital_not_shippable():
 
 
 # 7. Inventory operations continue to work
-def test_inventory_operations():
+def test_inventory_operations() -> None:
     inventory = Inventory()
     assert inventory.add_product(make_guitar())
     assert inventory.add_product(make_os())
@@ -102,7 +103,7 @@ def test_inventory_operations():
 
 
 # 8. JSON saving and loading preserve the correct product types
-def test_json_round_trip():
+def test_json_round_trip() -> None:
     inventory = Inventory()
     inventory.add_product(make_guitar())
     inventory.add_product(make_os())
@@ -132,7 +133,7 @@ def test_json_round_trip():
 
 
 # Extra: records saved before Lab 7 (no "type") still load, as physical products
-def test_old_json_record_loads():
+def test_old_json_record_loads() -> None:
     product = product_from_dict({"id": "P001", "name": "Laptop", "price": 1200.0, "stock": 15})
     assert isinstance(product, PhysicalProduct) and product.get_weight() == 0.0
     assert product.get_supplier().get_name() == "Unknown Supplier"  # no supplier saved before Lab 8

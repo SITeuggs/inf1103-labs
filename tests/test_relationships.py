@@ -127,8 +127,9 @@ def test_aggregation_product_moves_between_inventories() -> None:
 
     # Step 5: removing it from an inventory did not destroy it
     assert inventory_a.find_product("P100") is None
-    assert inventory_b.find_product("P100") is guitar
-    assert inventory_b.find_product("P100").get_stock() == 8  # keeps the change made in step 3
+    found = inventory_b.find_product("P100")
+    assert found is guitar
+    assert found.get_stock() == 8  # keeps the change made in step 3
 
 
 # 3c. transfer_product moves the same object from one inventory to another
@@ -246,8 +247,10 @@ def test_order_line_does_not_own_product() -> None:
     inventory = Inventory()
     inventory.add_product(guitar)
 
+    product = inventory.find_product("P100")
+    assert product is not None  # find_product returns Product | None
     order = Order("O001")
-    order.add_order_line(inventory.find_product("P100"), 1)
+    order.add_order_line(product, 1)
     del order  # the Order and its OrderLine are gone...
 
     print("Product is still in the inventory after the order is deleted:")

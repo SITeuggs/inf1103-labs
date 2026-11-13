@@ -1,8 +1,28 @@
 import json
 import os
 from abc import ABC, abstractmethod
+from typing import NotRequired, TypedDict
 
-FILE_NAME = "inventory.json"
+FILE_NAME: str = "inventory.json"
+
+
+# Typed dictionaries describing the JSON records used to save and load the inventory.
+# Each key has its own type, so a type checker knows that "price" is a float, "stock" an int, etc.
+class SupplierRecord(TypedDict):
+    id: str
+    name: str
+    contact_email: str
+
+
+class ProductRecord(TypedDict):
+    id: str
+    name: str
+    price: float
+    stock: int
+    supplier: NotRequired[SupplierRecord]  # missing in records saved before Lab 8
+    type: NotRequired[str]                 # missing in records saved before Lab 7
+    weight: NotRequired[float]             # physical products only
+    download_size: NotRequired[float]      # digital products only
 
 
 class Supplier:
@@ -28,7 +48,7 @@ class Supplier:
         """Display this supplier's details on one line."""
         print(f"Supplier ID: {self.__supplier_id} | Name: {self.__name} | Email: {self.__contact_email}")
 
-    def to_dict(self) -> dict[str, str]:
+    def to_dict(self) -> SupplierRecord:
         """Convert the supplier to a dictionary so it can be saved as JSON."""
         return {
             "id": self.__supplier_id,
@@ -42,10 +62,10 @@ class Product(ABC):
 
     def __init__(self, product_id: str, name: str, price: float, stock: int,
                  supplier: Supplier) -> None:
-        self.__product_id = product_id
-        self.__name = name
-        self.__price = price
-        self.__stock = stock
+        self.__product_id: str = product_id
+        self.__name: str = name
+        self.__price: float = price
+        self.__stock: int = stock
         # Association: keep a reference to a Supplier that was created elsewhere.
         # The Product does not create or own the Supplier.
         self.__supplier: Supplier = supplier
@@ -53,19 +73,19 @@ class Product(ABC):
     def get_supplier(self) -> Supplier:
         return self.__supplier
 
-    def get_product_id(self):
+    def get_product_id(self) -> str:
         return self.__product_id
 
-    def get_name(self):
+    def get_name(self) -> str:
         return self.__name
 
-    def get_price(self):
+    def get_price(self) -> float:
         return self.__price
 
-    def get_stock(self):
+    def get_stock(self) -> int:
         return self.__stock
 
-    def update_stock(self, quantity):
+    def update_stock(self, quantity: int) -> bool:
         """Set a new stock quantity. Returns True if the update was accepted."""
         if quantity < 0:
             print("Error: Stock quantity cannot be negative.")
@@ -73,12 +93,12 @@ class Product(ABC):
         self.__stock = quantity
         return True
 
-    def display_information(self):
+    def display_information(self) -> None:
         """Display this product's details on one line."""
         print(f"ID: {self.__product_id} | Name: {self.__name} | Price: ${self.__price:.2f} | "
               f"Stock: {self.__stock} | Supplier: {self.__supplier.get_name()}")
 
-    def to_dict(self):
+    def to_dict(self) -> ProductRecord:
         """Convert the product to a dictionary so it can be saved as JSON."""
         return {
             "id": self.__product_id,
@@ -89,7 +109,7 @@ class Product(ABC):
         }
 
     @abstractmethod
-    def get_fulfilment_info(self):
+    def get_fulfilment_info(self) -> str:
         """Return a message describing how this product is delivered to the customer."""
         pass
 
@@ -98,7 +118,7 @@ class CanBeShipped(ABC):
     """Interface: any class that signs this contract must be able to calculate a shipping cost."""
 
     @abstractmethod
-    def calculate_shipping_cost(self):
+    def calculate_shipping_cost(self) -> float:
         """Return the cost of shipping this object."""
         pass
 
@@ -107,30 +127,30 @@ class PhysicalProduct(Product, CanBeShipped):
     """A product that physically exists and has a weight (in kg).
     Inherits from Product (is-a) and implements the CanBeShipped interface."""
 
-    BASE_SHIPPING_FEE = 5.00   # flat fee per shipment
-    COST_PER_KG = 2.00         # extra charge for each kg
+    BASE_SHIPPING_FEE: float = 5.00   # flat fee per shipment
+    COST_PER_KG: float = 2.00         # extra charge for each kg
 
     def __init__(self, product_id: str, name: str, price: float, stock: int,
                  supplier: Supplier, weight: float) -> None:
         super().__init__(product_id, name, price, stock, supplier)
-        self.__weight = weight
+        self.__weight: float = weight
 
-    def get_weight(self):
+    def get_weight(self) -> float:
         return self.__weight
 
-    def calculate_shipping_cost(self):
+    def calculate_shipping_cost(self) -> float:
         """Shipping cost = flat fee + cost per kg * weight."""
         return self.BASE_SHIPPING_FEE + self.COST_PER_KG * self.__weight
 
-    def get_fulfilment_info(self):
+    def get_fulfilment_info(self) -> str:
         return f"{self.get_name()} requires physical shipping ({self.__weight} kg)."
 
-    def display_information(self):
+    def display_information(self) -> None:
         """Display the common product details (from Product), then the weight."""
         super().display_information()
         print(f"    Type: Physical | Weight: {self.__weight} kg")
 
-    def to_dict(self):
+    def to_dict(self) -> ProductRecord:
         """Reuse Product's dictionary, then add the type and weight."""
         data = super().to_dict()
         data["type"] = "physical"
@@ -144,20 +164,20 @@ class DigitalProduct(Product):
     def __init__(self, product_id: str, name: str, price: float, stock: int,
                  supplier: Supplier, download_size: float) -> None:
         super().__init__(product_id, name, price, stock, supplier)
-        self.__download_size = download_size
+        self.__download_size: float = download_size
 
-    def get_download_size(self):
+    def get_download_size(self) -> float:
         return self.__download_size
 
-    def get_fulfilment_info(self):
+    def get_fulfilment_info(self) -> str:
         return f"{self.get_name()} is delivered digitally via download link ({self.__download_size} MB)."
 
-    def display_information(self):
+    def display_information(self) -> None:
         """Display the common product details (from Product), then the download size."""
         super().display_information()
         print(f"    Type: Digital | Download Size: {self.__download_size} MB")
 
-    def to_dict(self):
+    def to_dict(self) -> ProductRecord:
         """Reuse Product's dictionary, then add the type and download size."""
         data = super().to_dict()
         data["type"] = "digital"
@@ -212,7 +232,7 @@ class Inventory:
         """Empty the inventory. Only the references are removed; the Products still exist."""
         self.__products.clear()
 
-    def display_all(self):
+    def display_all(self) -> None:
         """Display all products in the inventory."""
         print("\nCurrent Inventory")
         if not self.__products:
@@ -225,7 +245,7 @@ class Inventory:
         """Return a copy of the product list, so callers can read it without changing the inventory."""
         return list(self.__products)
 
-    def to_list(self):
+    def to_list(self) -> list[ProductRecord]:
         """Convert all products to a list of dictionaries for saving."""
         return [product.to_dict() for product in self.__products]
 
@@ -310,7 +330,7 @@ class Order:
         print(f"Order Total: ${self.calculate_total():.2f}")
 
 
-def create_default_inventory():
+def create_default_inventory() -> Inventory:
     """Create an inventory filled with the default sample products.
     Suppliers are created first, on their own, then passed to each Product (association)."""
     tech_supplier = Supplier("S001", "TechSource Pte Ltd", "sales@techsource.com")
@@ -325,10 +345,10 @@ def create_default_inventory():
 
 
 # Used for records saved before Lab 8, which have no supplier information
-UNKNOWN_SUPPLIER_DATA = {"id": "S000", "name": "Unknown Supplier", "contact_email": "n/a"}
+UNKNOWN_SUPPLIER_DATA: SupplierRecord = {"id": "S000", "name": "Unknown Supplier", "contact_email": "n/a"}
 
 
-def supplier_from_dict(data: dict[str, str], suppliers: dict[str, Supplier]) -> Supplier:
+def supplier_from_dict(data: SupplierRecord, suppliers: dict[str, Supplier]) -> Supplier:
     """Return the Supplier described by data. If a Supplier with the same ID was already
     loaded, reuse that object so products from the same supplier share one Supplier."""
     supplier_id = data["id"]
@@ -337,7 +357,7 @@ def supplier_from_dict(data: dict[str, str], suppliers: dict[str, Supplier]) -> 
     return suppliers[supplier_id]
 
 
-def product_from_dict(item, suppliers: dict[str, Supplier] | None = None):
+def product_from_dict(item: ProductRecord, suppliers: dict[str, Supplier] | None = None) -> Product:
     """Create the correct Product subclass from a saved dictionary, using its "type" field.
     Records saved before Lab 7 have no type, so they are treated as physical products.
     Records saved before Lab 8 have no supplier, so they get the "Unknown Supplier"."""
@@ -355,7 +375,7 @@ def product_from_dict(item, suppliers: dict[str, Supplier] | None = None):
     raise ValueError(f"Unknown product type: {product_type}")
 
 
-def load_inventory():
+def load_inventory() -> Inventory:
     """Load inventory from JSON file if it exists; otherwise load default initial data."""
     if not os.path.exists(FILE_NAME):
         print(f"{FILE_NAME} not found. Starting with default inventory.")
@@ -364,13 +384,13 @@ def load_inventory():
     print(f"{FILE_NAME} found.")
     try:
         with open(FILE_NAME, "r") as f:
-            data = json.load(f)
+            data: list[ProductRecord] = json.load(f)
     except json.JSONDecodeError:
         print("Error reading file. Starting with default inventory.")
         return create_default_inventory()
 
     inventory = Inventory()
-    suppliers = {}  # supplier ID -> Supplier, so each supplier is only created once
+    suppliers: dict[str, Supplier] = {}  # supplier ID -> Supplier, so each supplier is only created once
     for item in data:
         try:
             inventory.add_product(product_from_dict(item, suppliers))
@@ -380,7 +400,7 @@ def load_inventory():
     return inventory
 
 
-def save_inventory(inventory, show_message=True):
+def save_inventory(inventory: Inventory, show_message: bool = True) -> None:
     """Save the inventory to the JSON file (FILE_NAME)."""
     if show_message:
         print("Saving inventory...")
@@ -389,7 +409,7 @@ def save_inventory(inventory, show_message=True):
     print(f"Inventory saved successfully to {FILE_NAME}.")
 
 # Main Program
-def find_supplier(inventory, supplier_id: str) -> Supplier | None:
+def find_supplier(inventory: Inventory, supplier_id: str) -> Supplier | None:
     """Return an existing Supplier (used by a product in the inventory) with this ID, or None."""
     for product in inventory.get_products():
         supplier = product.get_supplier()
@@ -398,7 +418,7 @@ def find_supplier(inventory, supplier_id: str) -> Supplier | None:
     return None
 
 
-def choose_supplier_menu(inventory) -> Supplier | None:
+def choose_supplier_menu(inventory: Inventory) -> Supplier | None:
     """Ask for a supplier ID. Reuse the existing Supplier if one is known,
     otherwise create a new Supplier from the details the user enters."""
     supplier_id = input("Supplier ID: ").strip()
@@ -417,7 +437,7 @@ def choose_supplier_menu(inventory) -> Supplier | None:
     return Supplier(supplier_id, name, email)
 
 
-def add_product_menu(inventory):
+def add_product_menu(inventory: Inventory) -> None:
     """Ask the user for new product details and add it to the inventory."""
     print("\nAdd New Product")
     prod_id = input("Product ID: ").strip()
@@ -455,7 +475,7 @@ def add_product_menu(inventory):
         return
 
     if type_choice == "1":
-        product = PhysicalProduct(prod_id, name, price, stock, supplier, extra)
+        product: Product = PhysicalProduct(prod_id, name, price, stock, supplier, extra)
     else:
         product = DigitalProduct(prod_id, name, price, stock, supplier, extra)
 
@@ -463,7 +483,7 @@ def add_product_menu(inventory):
     print("Product added successfully!")
 
 
-def update_stock_menu(inventory):
+def update_stock_menu(inventory: Inventory) -> None:
     """Ask the user for a product ID and new stock quantity."""
     print("\nUpdate Stock")
     prod_id = input("Enter Product ID: ").strip()
@@ -486,7 +506,7 @@ def update_stock_menu(inventory):
         print("\nStock updated successfully!")
 
 
-def search_product_menu(inventory):
+def search_product_menu(inventory: Inventory) -> None:
     """Ask the user for a product ID and display the matching product."""
     print("\nSearch Product")
     prod_id = input("Enter Product ID: ").strip()
@@ -506,7 +526,7 @@ def search_product_menu(inventory):
     print("-" * 40)
 
 
-def remove_product_menu(inventory):
+def remove_product_menu(inventory: Inventory) -> None:
     """Ask the user for a product ID and remove that product from the inventory."""
     print("\nRemove Product")
     prod_id = input("Enter Product ID: ").strip()
@@ -518,7 +538,7 @@ def remove_product_menu(inventory):
     print(f"{product.get_name()} ({product.get_product_id()}) removed from the inventory.")
 
 
-def create_order_menu(inventory):
+def create_order_menu(inventory: Inventory) -> None:
     """Build a customer Order from products in the inventory, then display it with its total.
     The Order creates its own OrderLines through add_order_line()."""
     print("\nCreate Order")
@@ -547,7 +567,7 @@ def create_order_menu(inventory):
     order.display_information()
 
 
-def main():
+def main() -> None:
     print("INVENTORY MANAGEMENT SYSTEM")
     inventory = load_inventory()
 
