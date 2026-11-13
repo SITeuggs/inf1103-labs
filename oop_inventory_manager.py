@@ -229,6 +229,87 @@ class Inventory:
         """Convert all products to a list of dictionaries for saving."""
         return [product.to_dict() for product in self.__products]
 
+
+class OrderLine:
+    """One product and the quantity of it requested in an Order.
+    Composition: an OrderLine is created by, and belongs to, exactly one Order.
+    Association: it refers to a Product, but does NOT own it - the Product
+    exists on its own and may also be in an Inventory."""
+
+    def __init__(self, product: Product, quantity: int) -> None:
+        self.__product: Product = product
+        self.__quantity: int = quantity
+
+    def get_product(self) -> Product:
+        return self.__product
+
+    def get_quantity(self) -> int:
+        return self.__quantity
+
+    def calculate_subtotal(self) -> float:
+        """Return the product price multiplied by the quantity."""
+        return self.__product.get_price() * self.__quantity
+
+    def display_information(self) -> None:
+        """Display this order line on one line."""
+        print(f"{self.__product.get_product_id()} | {self.__product.get_name()} | "
+              f"${self.__product.get_price():.2f} x {self.__quantity} = ${self.calculate_subtotal():.2f}")
+
+
+class Order:
+    """A customer order made up of OrderLine objects.
+    Composition: the Order creates and manages its own OrderLines. They are never
+    created outside the Order or passed in, never transferred to another Order,
+    and they are removed together with the Order when it is cancelled."""
+
+    def __init__(self, order_id: str) -> None:
+        self.__order_id: str = order_id
+        self.__order_lines: list[OrderLine] = []
+
+    def get_order_id(self) -> str:
+        return self.__order_id
+
+    def add_order_line(self, product: Product, quantity: int) -> bool:
+        """Create a new OrderLine inside this Order for the given product and quantity.
+        Returns False (and creates nothing) if the quantity is not a positive number."""
+        if quantity <= 0:
+            print("Error: Order quantity must be greater than zero.")
+            return False
+        order_line = OrderLine(product, quantity)  # the Order creates its own part
+        self.__order_lines.append(order_line)
+        return True
+
+    def remove_order_line(self, product_id: str) -> bool:
+        """Remove the order line for this product. The OrderLine is discarded (not returned),
+        because it has no meaning outside this Order. Returns False if no line matches."""
+        for order_line in self.__order_lines:
+            if order_line.get_product().get_product_id().lower() == product_id.lower():
+                self.__order_lines.remove(order_line)
+                return True
+        return False
+
+    def get_order_lines(self) -> list[OrderLine]:
+        """Return a copy of the order lines for reading only. Changes must go through the Order."""
+        return list(self.__order_lines)
+
+    def calculate_total(self) -> float:
+        """Return the total value of the order by asking each OrderLine for its subtotal."""
+        return sum(order_line.calculate_subtotal() for order_line in self.__order_lines)
+
+    def cancel(self) -> None:
+        """Cancel the order. Its OrderLines are removed with it (their lifecycle is tied to the Order)."""
+        self.__order_lines.clear()
+
+    def display_information(self) -> None:
+        """Display the order ID, each order line and the order total."""
+        print(f"\nOrder {self.__order_id}")
+        if not self.__order_lines:
+            print("No order lines.")
+        for order_line in self.__order_lines:
+            order_line.display_information()
+        print(f"Order Total: ${self.calculate_total():.2f}")
+
+
 def create_default_inventory():
     """Create an inventory filled with the default sample products.
     Suppliers are created first, on their own, then passed to each Product (association)."""
@@ -437,6 +518,35 @@ def remove_product_menu(inventory):
     print(f"{product.get_name()} ({product.get_product_id()}) removed from the inventory.")
 
 
+def create_order_menu(inventory):
+    """Build a customer Order from products in the inventory, then display it with its total.
+    The Order creates its own OrderLines through add_order_line()."""
+    print("\nCreate Order")
+    order_id = input("Order ID: ").strip()
+    if not order_id:
+        print("Invalid input. Order ID cannot be empty.")
+        return
+    order = Order(order_id)
+
+    while True:
+        prod_id = input("Product ID to add (press Enter to finish): ").strip()
+        if not prod_id:
+            break
+        product = inventory.find_product(prod_id)
+        if product is None:
+            print("Product not found.")
+            continue
+        try:
+            quantity = int(input("Quantity: "))
+        except ValueError:
+            print("Invalid input. Quantity must be an integer.")
+            continue
+        if order.add_order_line(product, quantity):
+            print(f"Added {quantity} x {product.get_name()}.")
+
+    order.display_information()
+
+
 def main():
     print("INVENTORY MANAGEMENT SYSTEM")
     inventory = load_inventory()
@@ -448,8 +558,9 @@ def main():
         print("3. Update Stock")
         print("4. Search Product")
         print("5. Remove Product")
-        print("6. Save Inventory")
-        print("7. Exit")
+        print("6. Create Order")
+        print("7. Save Inventory")
+        print("8. Exit")
 
         choice = input("Enter option: ").strip()
 
@@ -464,15 +575,17 @@ def main():
         elif choice == "5":
             remove_product_menu(inventory)
         elif choice == "6":
-            save_inventory(inventory)
+            create_order_menu(inventory)
         elif choice == "7":
+            save_inventory(inventory)
+        elif choice == "8":
             print("\nSaving inventory before exit...")
             save_inventory(inventory, show_message=False)
             print("\nThank you for using Inventory Management System.")
             print("Program terminated.")
             break
         else:
-            print("Invalid choice. Please select a valid option (1-7).")
+            print("Invalid choice. Please select a valid option (1-8).")
 
 
 if __name__ == "__main__":
