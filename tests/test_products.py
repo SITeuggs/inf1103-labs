@@ -98,7 +98,7 @@ def test_inventory_operations() -> None:
     assert found.update_stock(20) and found.get_stock() == 20
     assert not found.update_stock(-1) and found.get_stock() == 20
 
-    inventory.display_all()
+    inventory.display_all_products()
     assert len(inventory.to_list()) == 2
 
 

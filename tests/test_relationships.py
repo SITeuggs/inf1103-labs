@@ -113,7 +113,7 @@ def test_aggregation_product_moves_between_inventories() -> None:
     inventory_a = Inventory()
     inventory_b = Inventory()
     inventory_a.add_product(guitar)
-    inventory_a.display_all()
+    inventory_a.display_all_products()
 
     # Step 3: remove it from Inventory A - the Product object can still be used
     inventory_a.remove_product("P100")
@@ -123,7 +123,7 @@ def test_aggregation_product_moves_between_inventories() -> None:
 
     # Step 4: add the SAME Product object to Inventory B
     inventory_b.add_product(guitar)
-    inventory_b.display_all()
+    inventory_b.display_all_products()
 
     # Step 5: removing it from an inventory did not destroy it
     assert inventory_a.find_product("P100") is None
@@ -155,7 +155,7 @@ def test_emptied_inventory_keeps_products() -> None:
     inventory.add_product(os_product)
 
     inventory.clear()
-    inventory.display_all()
+    inventory.display_all_products()
     assert inventory.get_products() == []
 
     print("Products still exist after the inventory is emptied:")
@@ -254,7 +254,7 @@ def test_order_line_does_not_own_product() -> None:
     del order  # the Order and its OrderLine are gone...
 
     print("Product is still in the inventory after the order is deleted:")
-    inventory.display_all()
+    inventory.display_all_products()
     assert inventory.find_product("P100") is guitar  # ...but the Product is not
 
 

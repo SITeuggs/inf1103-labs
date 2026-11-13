@@ -58,7 +58,14 @@ class Supplier:
 
 
 class Product(ABC):
-    """Abstract base class for all products. Cannot be instantiated directly."""
+    """Abstract base class for all products. Cannot be instantiated directly.
+
+    Liskov Substitution Principle: code such as Inventory and Order only knows about
+    Product, so every subclass must keep the expectations Product sets out:
+      - update_stock() accepts any quantity >= 0, rejects negatives, and returns a bool.
+      - get_fulfilment_info() always returns a str describing delivery.
+      - display_information() and to_dict() may ADD details, but keep the common ones.
+    """
 
     def __init__(self, product_id: str, name: str, price: float, stock: int,
                  supplier: Supplier) -> None:
@@ -86,7 +93,10 @@ class Product(ABC):
         return self.__stock
 
     def update_stock(self, quantity: int) -> bool:
-        """Set a new stock quantity. Returns True if the update was accepted."""
+        """Set a new stock quantity. Returns True if the update was accepted.
+        Expectation for every subclass: any quantity >= 0 is accepted and becomes the
+        new stock; a negative quantity is rejected (False) and the stock is unchanged.
+        For a DigitalProduct, stock means the number of licences available to sell."""
         if quantity < 0:
             print("Error: Stock quantity cannot be negative.")
             return False
@@ -232,8 +242,10 @@ class Inventory:
         """Empty the inventory. Only the references are removed; the Products still exist."""
         self.__products.clear()
 
-    def display_all(self) -> None:
-        """Display all products in the inventory."""
+    def display_all_products(self) -> None:
+        """Display all products in the inventory.
+        Polymorphism: each Product displays itself, and the object's own class decides
+        which display_information() runs - no checks for PhysicalProduct/DigitalProduct."""
         print("\nCurrent Inventory")
         if not self.__products:
             print("No products available.")
@@ -521,6 +533,8 @@ def search_product_menu(inventory: Inventory) -> None:
     product.display_information()
     product.get_supplier().display_information()
     print(f"Fulfilment: {product.get_fulfilment_info()}")
+    # Shipping is NOT part of the Product contract - it is the optional CanBeShipped interface,
+    # so here we check for that interface rather than for a particular Product subclass.
     if isinstance(product, CanBeShipped):
         print(f"Shipping Cost: ${product.calculate_shipping_cost():.2f}")
     print("-" * 40)
@@ -585,7 +599,7 @@ def main() -> None:
         choice = input("Enter option: ").strip()
 
         if choice == "1":
-            inventory.display_all()
+            inventory.display_all_products()
         elif choice == "2":
             add_product_menu(inventory)
         elif choice == "3":
