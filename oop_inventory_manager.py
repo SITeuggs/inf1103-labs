@@ -166,24 +166,51 @@ class DigitalProduct(Product):
 
 
 class Inventory:
-    """Manages a collection of Product objects."""
+    """Manages a collection of Product objects.
+    Aggregation: the Inventory is a whole made up of Product parts, but it does not
+    create or own them. Products exist before they are added, and removing a Product
+    only removes the Inventory's reference to it - the Product itself is not destroyed."""
 
-    def __init__(self):
-        self.__products = []
+    def __init__(self) -> None:
+        # Typed with the base class Product, so it can hold any kind of Product
+        self.__products: list[Product] = []
 
-    def add_product(self, product):
-        """Add a product. Returns False if a product with the same ID already exists."""
-        if self.search_product(product.get_product_id()) is not None:
+    def add_product(self, product: Product) -> bool:
+        """Add an existing Product object. Returns False if a product with the same ID already exists."""
+        if self.find_product(product.get_product_id()) is not None:
             return False
         self.__products.append(product)
         return True
 
-    def search_product(self, product_id):
+    def find_product(self, product_id: str) -> Product | None:
         """Return the product with the given ID, or None if not found."""
         for product in self.__products:
             if product.get_product_id().lower() == product_id.lower():
                 return product
         return None
+
+    def remove_product(self, product_id: str) -> Product | None:
+        """Remove the matching Product reference from this inventory.
+        The Product object is returned (not destroyed) so it can still be used,
+        or None if no product with that ID is in the inventory."""
+        product = self.find_product(product_id)
+        if product is not None:
+            self.__products.remove(product)
+        return product
+
+    def transfer_product(self, product_id: str, destination: "Inventory") -> bool:
+        """Move the same Product object from this inventory to another inventory.
+        Returns False if the product is not here or the destination already has that ID."""
+        product = self.find_product(product_id)
+        if product is None or destination.find_product(product_id) is not None:
+            return False
+        self.remove_product(product_id)
+        destination.add_product(product)
+        return True
+
+    def clear(self) -> None:
+        """Empty the inventory. Only the references are removed; the Products still exist."""
+        self.__products.clear()
 
     def display_all(self):
         """Display all products in the inventory."""
@@ -194,7 +221,7 @@ class Inventory:
         for product in self.__products:
             product.display_information()
 
-    def get_products(self):
+    def get_products(self) -> list[Product]:
         """Return a copy of the product list, so callers can read it without changing the inventory."""
         return list(self.__products)
 
@@ -314,7 +341,7 @@ def add_product_menu(inventory):
     print("\nAdd New Product")
     prod_id = input("Product ID: ").strip()
 
-    if inventory.search_product(prod_id) is not None:
+    if inventory.find_product(prod_id) is not None:
         print("Error: Product ID already exists.")
         return
 
@@ -360,7 +387,7 @@ def update_stock_menu(inventory):
     print("\nUpdate Stock")
     prod_id = input("Enter Product ID: ").strip()
 
-    product = inventory.search_product(prod_id)
+    product = inventory.find_product(prod_id)
     if product is None:
         print("Product not found.")
         return
@@ -383,7 +410,7 @@ def search_product_menu(inventory):
     print("\nSearch Product")
     prod_id = input("Enter Product ID: ").strip()
 
-    product = inventory.search_product(prod_id)
+    product = inventory.find_product(prod_id)
     if product is None:
         print("\nProduct not found.")
         return
@@ -398,6 +425,18 @@ def search_product_menu(inventory):
     print("-" * 40)
 
 
+def remove_product_menu(inventory):
+    """Ask the user for a product ID and remove that product from the inventory."""
+    print("\nRemove Product")
+    prod_id = input("Enter Product ID: ").strip()
+
+    product = inventory.remove_product(prod_id)
+    if product is None:
+        print("Product not found.")
+        return
+    print(f"{product.get_name()} ({product.get_product_id()}) removed from the inventory.")
+
+
 def main():
     print("INVENTORY MANAGEMENT SYSTEM")
     inventory = load_inventory()
@@ -408,8 +447,9 @@ def main():
         print("2. Add Product")
         print("3. Update Stock")
         print("4. Search Product")
-        print("5. Save Inventory")
-        print("6. Exit")
+        print("5. Remove Product")
+        print("6. Save Inventory")
+        print("7. Exit")
 
         choice = input("Enter option: ").strip()
 
@@ -422,15 +462,17 @@ def main():
         elif choice == "4":
             search_product_menu(inventory)
         elif choice == "5":
-            save_inventory(inventory)
+            remove_product_menu(inventory)
         elif choice == "6":
+            save_inventory(inventory)
+        elif choice == "7":
             print("\nSaving inventory before exit...")
             save_inventory(inventory, show_message=False)
             print("\nThank you for using Inventory Management System.")
             print("Program terminated.")
             break
         else:
-            print("Invalid choice. Please select a valid option (1-6).")
+            print("Invalid choice. Please select a valid option (1-7).")
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 
 These tests demonstrate the object relationships from Lab 8:
   - Association: Supplier <-> Product (section 2)
+  - Aggregation: Inventory <>-- Product (section 3)
 Tests print their output so you can see the behaviour, and use assert so a failure is reported.
 """
 import os
@@ -10,7 +11,7 @@ import sys
 # Let this file (inside tests/) import modules from the project folder above it
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from oop_inventory_manager import Supplier, PhysicalProduct, DigitalProduct
+from oop_inventory_manager import Supplier, PhysicalProduct, DigitalProduct, Inventory
 
 
 def make_supplier() -> Supplier:
@@ -73,10 +74,101 @@ def test_supplier_exists_independently() -> None:
     assert supplier.get_name() == "Acme Supplies"
 
 
+# ---------------------------------------------------------------------------
+# Section 3: Aggregation - Inventory and Product
+# ---------------------------------------------------------------------------
+
+# 3a. Inventory supports add_product, find_product and remove_product
+def test_inventory_add_find_remove() -> None:
+    supplier = make_supplier()
+    guitar = PhysicalProduct("P100", "Guitar", 350.00, 5, supplier, 3.5)
+    inventory = Inventory()
+
+    assert inventory.add_product(guitar)
+    assert inventory.find_product("P100") is guitar  # the same object, not a copy
+    assert inventory.find_product("NOPE") is None
+
+    removed = inventory.remove_product("P100")
+    assert removed is guitar
+    assert inventory.find_product("P100") is None
+    assert inventory.remove_product("P100") is None  # nothing left to remove
+    print("add_product, find_product and remove_product work")
+
+
+# 3b. Test aggregation (steps 1-5 from the lab)
+#     Predict first (before step 3): the Product still works after it is removed from
+#     Inventory A, because remove_product only removes the Inventory's reference.
+def test_aggregation_product_moves_between_inventories() -> None:
+    supplier = make_supplier()
+
+    # Step 1: create the Product BEFORE any Inventory exists
+    guitar = PhysicalProduct("P100", "Guitar", 350.00, 5, supplier, 3.5)
+    print("Product created before any inventory:")
+    guitar.display_information()
+
+    # Step 2: add it to Inventory A
+    inventory_a = Inventory()
+    inventory_b = Inventory()
+    inventory_a.add_product(guitar)
+    inventory_a.display_all()
+
+    # Step 3: remove it from Inventory A - the Product object can still be used
+    inventory_a.remove_product("P100")
+    print("After removing from Inventory A, the product still works:")
+    guitar.display_information()
+    assert guitar.update_stock(8) and guitar.get_stock() == 8
+
+    # Step 4: add the SAME Product object to Inventory B
+    inventory_b.add_product(guitar)
+    inventory_b.display_all()
+
+    # Step 5: removing it from an inventory did not destroy it
+    assert inventory_a.find_product("P100") is None
+    assert inventory_b.find_product("P100") is guitar
+    assert inventory_b.find_product("P100").get_stock() == 8  # keeps the change made in step 3
+
+
+# 3c. transfer_product moves the same object from one inventory to another
+def test_transfer_product() -> None:
+    guitar = PhysicalProduct("P100", "Guitar", 350.00, 5, make_supplier(), 3.5)
+    inventory_a, inventory_b = Inventory(), Inventory()
+    inventory_a.add_product(guitar)
+
+    assert inventory_a.transfer_product("P100", inventory_b)
+    assert inventory_a.find_product("P100") is None
+    assert inventory_b.find_product("P100") is guitar
+    assert not inventory_a.transfer_product("P100", inventory_b)  # no longer in A
+    print("Guitar transferred from Inventory A to Inventory B")
+
+
+# 3d. Emptying an inventory does not destroy its products
+def test_emptied_inventory_keeps_products() -> None:
+    supplier = make_supplier()
+    guitar = PhysicalProduct("P100", "Guitar", 350.00, 5, supplier, 3.5)
+    os_product = DigitalProduct("D100", "Operating System", 139.99, 100, supplier, 4500)
+    inventory = Inventory()
+    inventory.add_product(guitar)
+    inventory.add_product(os_product)
+
+    inventory.clear()
+    inventory.display_all()
+    assert inventory.get_products() == []
+
+    print("Products still exist after the inventory is emptied:")
+    guitar.display_information()
+    os_product.display_information()
+    assert guitar.get_name() == "Guitar" and os_product.get_name() == "Operating System"
+
+
 TESTS = [
     ("Association: products refer to a shared Supplier", test_supplier_association),
     ("Association: products keep their Supplier after `del supplier`", test_products_keep_supplier_after_del),
     ("Association: Supplier exists independently of Products", test_supplier_exists_independently),
+    ("Aggregation: Inventory add/find/remove", test_inventory_add_find_remove),
+    ("Aggregation: Product moves from Inventory A to B without being destroyed",
+     test_aggregation_product_moves_between_inventories),
+    ("Aggregation: transfer_product moves the same object", test_transfer_product),
+    ("Aggregation: emptied Inventory does not destroy Products", test_emptied_inventory_keeps_products),
 ]
 
 

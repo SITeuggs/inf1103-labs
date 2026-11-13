@@ -90,9 +90,9 @@ def test_inventory_operations():
     assert inventory.add_product(make_os())
     assert not inventory.add_product(make_guitar()), "duplicate ID should be rejected"
 
-    found = inventory.search_product("p100")  # search is case-insensitive
+    found = inventory.find_product("p100")  # search is case-insensitive
     assert found is not None and found.get_name() == "Guitar"
-    assert inventory.search_product("NOPE") is None
+    assert inventory.find_product("NOPE") is None
 
     assert found.update_stock(20) and found.get_stock() == 20
     assert not found.update_stock(-1) and found.get_stock() == 20
@@ -122,8 +122,8 @@ def test_json_round_trip():
         finally:
             manager.FILE_NAME = original_file
 
-    guitar = reloaded.search_product("P100")
-    os_product = reloaded.search_product("D100")
+    guitar = reloaded.find_product("P100")
+    os_product = reloaded.find_product("D100")
     assert type(guitar) is PhysicalProduct and guitar.get_weight() == 3.5
     assert type(os_product) is DigitalProduct and os_product.get_download_size() == 4500
     # Lab 8: the supplier is saved too, and products from the same supplier share one Supplier object
