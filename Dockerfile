@@ -2,10 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# OOP Inventory Management System, its tests and sample data
+# OOP Inventory Management System (Lab 8), its tests and sample data
 COPY oop_inventory_manager.py inventory.json ./
 COPY tests/ ./tests/
 
-# Default: run the interactive program (use `docker run -it ...`)
-# To run the tests instead: docker run --rm inventory-lab9 python tests/test_products.py
+# Build:            docker build -t inventory-lab8 .
+# Run the program:  docker run -it --rm inventory-lab8
+# Run all tests:    docker run --rm inventory-lab8 python tests/run_all_tests.py
 CMD ["python", "oop_inventory_manager.py"]
