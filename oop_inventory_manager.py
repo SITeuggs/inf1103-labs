@@ -5,14 +5,53 @@ from abc import ABC, abstractmethod
 FILE_NAME = "inventory.json"
 
 
+class Supplier:
+    """A company that supplies products.
+    Association with Product: a Supplier is created on its own and can exist
+    without any Product, and a Product is not a part of a Supplier (no ownership)."""
+
+    def __init__(self, supplier_id: str, name: str, contact_email: str) -> None:
+        self.__supplier_id: str = supplier_id
+        self.__name: str = name
+        self.__contact_email: str = contact_email
+
+    def get_supplier_id(self) -> str:
+        return self.__supplier_id
+
+    def get_name(self) -> str:
+        return self.__name
+
+    def get_contact_email(self) -> str:
+        return self.__contact_email
+
+    def display_information(self) -> None:
+        """Display this supplier's details on one line."""
+        print(f"Supplier ID: {self.__supplier_id} | Name: {self.__name} | Email: {self.__contact_email}")
+
+    def to_dict(self) -> dict[str, str]:
+        """Convert the supplier to a dictionary so it can be saved as JSON."""
+        return {
+            "id": self.__supplier_id,
+            "name": self.__name,
+            "contact_email": self.__contact_email
+        }
+
+
 class Product(ABC):
     """Abstract base class for all products. Cannot be instantiated directly."""
 
-    def __init__(self, product_id, name, price, stock):
+    def __init__(self, product_id: str, name: str, price: float, stock: int,
+                 supplier: Supplier) -> None:
         self.__product_id = product_id
         self.__name = name
         self.__price = price
         self.__stock = stock
+        # Association: keep a reference to a Supplier that was created elsewhere.
+        # The Product does not create or own the Supplier.
+        self.__supplier: Supplier = supplier
+
+    def get_supplier(self) -> Supplier:
+        return self.__supplier
 
     def get_product_id(self):
         return self.__product_id
@@ -36,7 +75,8 @@ class Product(ABC):
 
     def display_information(self):
         """Display this product's details on one line."""
-        print(f"ID: {self.__product_id} | Name: {self.__name} | Price: ${self.__price:.2f} | Stock: {self.__stock}")
+        print(f"ID: {self.__product_id} | Name: {self.__name} | Price: ${self.__price:.2f} | "
+              f"Stock: {self.__stock} | Supplier: {self.__supplier.get_name()}")
 
     def to_dict(self):
         """Convert the product to a dictionary so it can be saved as JSON."""
@@ -44,7 +84,8 @@ class Product(ABC):
             "id": self.__product_id,
             "name": self.__name,
             "price": self.__price,
-            "stock": self.__stock
+            "stock": self.__stock,
+            "supplier": self.__supplier.to_dict()
         }
 
     @abstractmethod
@@ -69,8 +110,9 @@ class PhysicalProduct(Product, CanBeShipped):
     BASE_SHIPPING_FEE = 5.00   # flat fee per shipment
     COST_PER_KG = 2.00         # extra charge for each kg
 
-    def __init__(self, product_id, name, price, stock, weight):
-        super().__init__(product_id, name, price, stock)
+    def __init__(self, product_id: str, name: str, price: float, stock: int,
+                 supplier: Supplier, weight: float) -> None:
+        super().__init__(product_id, name, price, stock, supplier)
         self.__weight = weight
 
     def get_weight(self):
@@ -99,8 +141,9 @@ class PhysicalProduct(Product, CanBeShipped):
 class DigitalProduct(Product):
     """A product delivered digitally, with a download size (in MB)."""
 
-    def __init__(self, product_id, name, price, stock, download_size):
-        super().__init__(product_id, name, price, stock)
+    def __init__(self, product_id: str, name: str, price: float, stock: int,
+                 supplier: Supplier, download_size: float) -> None:
+        super().__init__(product_id, name, price, stock, supplier)
         self.__download_size = download_size
 
     def get_download_size(self):
@@ -151,30 +194,56 @@ class Inventory:
         for product in self.__products:
             product.display_information()
 
+    def get_products(self):
+        """Return a copy of the product list, so callers can read it without changing the inventory."""
+        return list(self.__products)
+
     def to_list(self):
         """Convert all products to a list of dictionaries for saving."""
         return [product.to_dict() for product in self.__products]
 
 def create_default_inventory():
-    """Create an inventory filled with the default sample products."""
+    """Create an inventory filled with the default sample products.
+    Suppliers are created first, on their own, then passed to each Product (association)."""
+    tech_supplier = Supplier("S001", "TechSource Pte Ltd", "sales@techsource.com")
+    software_supplier = Supplier("S002", "SoftWorks Ltd", "orders@softworks.com")
+
     inventory = Inventory()
-    inventory.add_product(PhysicalProduct("P001", "Laptop", 1200.00, 15, 2.0))
-    inventory.add_product(PhysicalProduct("P002", "Mouse", 25.50, 40, 0.1))
-    inventory.add_product(PhysicalProduct("P003", "Keyboard", 45.00, 25, 0.8))
-    inventory.add_product(DigitalProduct("D001", "Antivirus Software", 49.99, 100, 350))
+    inventory.add_product(PhysicalProduct("P001", "Laptop", 1200.00, 15, tech_supplier, 2.0))
+    inventory.add_product(PhysicalProduct("P002", "Mouse", 25.50, 40, tech_supplier, 0.1))
+    inventory.add_product(PhysicalProduct("P003", "Keyboard", 45.00, 25, tech_supplier, 0.8))
+    inventory.add_product(DigitalProduct("D001", "Antivirus Software", 49.99, 100, software_supplier, 350))
     return inventory
 
 
-def product_from_dict(item):
+# Used for records saved before Lab 8, which have no supplier information
+UNKNOWN_SUPPLIER_DATA = {"id": "S000", "name": "Unknown Supplier", "contact_email": "n/a"}
+
+
+def supplier_from_dict(data: dict[str, str], suppliers: dict[str, Supplier]) -> Supplier:
+    """Return the Supplier described by data. If a Supplier with the same ID was already
+    loaded, reuse that object so products from the same supplier share one Supplier."""
+    supplier_id = data["id"]
+    if supplier_id not in suppliers:
+        suppliers[supplier_id] = Supplier(supplier_id, data["name"], data["contact_email"])
+    return suppliers[supplier_id]
+
+
+def product_from_dict(item, suppliers: dict[str, Supplier] | None = None):
     """Create the correct Product subclass from a saved dictionary, using its "type" field.
-    Records saved before Lab 7 have no type, so they are treated as physical products."""
+    Records saved before Lab 7 have no type, so they are treated as physical products.
+    Records saved before Lab 8 have no supplier, so they get the "Unknown Supplier"."""
+    if suppliers is None:
+        suppliers = {}
+    supplier = supplier_from_dict(item.get("supplier", UNKNOWN_SUPPLIER_DATA), suppliers)
+
     product_type = item.get("type", "physical")
     if product_type == "physical":
         return PhysicalProduct(item["id"], item["name"], item["price"], item["stock"],
-                               item.get("weight", 0.0))
+                               supplier, item.get("weight", 0.0))
     if product_type == "digital":
         return DigitalProduct(item["id"], item["name"], item["price"], item["stock"],
-                              item.get("download_size", 0.0))
+                              supplier, item.get("download_size", 0.0))
     raise ValueError(f"Unknown product type: {product_type}")
 
 
@@ -193,9 +262,10 @@ def load_inventory():
         return create_default_inventory()
 
     inventory = Inventory()
+    suppliers = {}  # supplier ID -> Supplier, so each supplier is only created once
     for item in data:
         try:
-            inventory.add_product(product_from_dict(item))
+            inventory.add_product(product_from_dict(item, suppliers))
         except (KeyError, ValueError) as error:
             print(f"Skipping invalid product record ({error}).")
     print("Inventory loaded successfully.")
@@ -211,6 +281,34 @@ def save_inventory(inventory, show_message=True):
     print(f"Inventory saved successfully to {FILE_NAME}.")
 
 # Main Program
+def find_supplier(inventory, supplier_id: str) -> Supplier | None:
+    """Return an existing Supplier (used by a product in the inventory) with this ID, or None."""
+    for product in inventory.get_products():
+        supplier = product.get_supplier()
+        if supplier.get_supplier_id().lower() == supplier_id.lower():
+            return supplier
+    return None
+
+
+def choose_supplier_menu(inventory) -> Supplier | None:
+    """Ask for a supplier ID. Reuse the existing Supplier if one is known,
+    otherwise create a new Supplier from the details the user enters."""
+    supplier_id = input("Supplier ID: ").strip()
+    if not supplier_id:
+        print("Invalid input. Supplier ID cannot be empty.")
+        return None
+
+    supplier = find_supplier(inventory, supplier_id)
+    if supplier is not None:
+        print(f"Using existing supplier: {supplier.get_name()}")
+        return supplier
+
+    print("New supplier - please enter the supplier details.")
+    name = input("Supplier Name: ").strip()
+    email = input("Supplier Contact Email: ").strip()
+    return Supplier(supplier_id, name, email)
+
+
 def add_product_menu(inventory):
     """Ask the user for new product details and add it to the inventory."""
     print("\nAdd New Product")
@@ -244,10 +342,14 @@ def add_product_menu(inventory):
         print("Invalid input. Values cannot be negative.")
         return
 
+    supplier = choose_supplier_menu(inventory)
+    if supplier is None:
+        return
+
     if type_choice == "1":
-        product = PhysicalProduct(prod_id, name, price, stock, extra)
+        product = PhysicalProduct(prod_id, name, price, stock, supplier, extra)
     else:
-        product = DigitalProduct(prod_id, name, price, stock, extra)
+        product = DigitalProduct(prod_id, name, price, stock, supplier, extra)
 
     inventory.add_product(product)
     print("Product added successfully!")
@@ -289,6 +391,7 @@ def search_product_menu(inventory):
     print("\nProduct Found")
     print("-" * 40)
     product.display_information()
+    product.get_supplier().display_information()
     print(f"Fulfilment: {product.get_fulfilment_info()}")
     if isinstance(product, CanBeShipped):
         print(f"Shipping Cost: ${product.calculate_shipping_cost():.2f}")

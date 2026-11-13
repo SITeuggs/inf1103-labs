@@ -13,17 +13,20 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import oop_inventory_manager as manager
 from oop_inventory_manager import (
-    Product, PhysicalProduct, DigitalProduct, CanBeShipped, Inventory,
+    Supplier, Product, PhysicalProduct, DigitalProduct, CanBeShipped, Inventory,
     product_from_dict, load_inventory, save_inventory,
 )
 
+# One shared supplier for the Lab 7 tests (Lab 8 made the supplier a required argument)
+TEST_SUPPLIER = Supplier("S100", "Acme Supplies", "sales@acme.com")
+
 
 def make_guitar():
-    return PhysicalProduct("P100", "Guitar", 350.00, 5, 3.5)
+    return PhysicalProduct("P100", "Guitar", 350.00, 5, TEST_SUPPLIER, 3.5)
 
 
 def make_os():
-    return DigitalProduct("D100", "Operating System", 139.99, 100, 4500)
+    return DigitalProduct("D100", "Operating System", 139.99, 100, TEST_SUPPLIER, 4500)
 
 
 # 1. Physical products store and display their weights
@@ -55,7 +58,7 @@ def test_fulfilment_info():
 # 4. The abstract Product class cannot be instantiated directly
 def test_product_is_abstract():
     try:
-        Product("X001", "Generic Thing", 10.00, 1)
+        Product("X001", "Generic Thing", 10.00, 1, TEST_SUPPLIER)
     except TypeError as error:
         print(f"TypeError (expected): {error}")
     else:
@@ -65,7 +68,7 @@ def test_product_is_abstract():
 # 5. Physical products can calculate shipping costs (rule: $5.00 + $2.00 per kg)
 def test_shipping_cost():
     for weight, expected in [(0.05, 5.10), (3.5, 12.00), (15.0, 35.00)]:
-        product = PhysicalProduct("P1", "Item", 10.0, 1, weight)
+        product = PhysicalProduct("P1", "Item", 10.0, 1, TEST_SUPPLIER, weight)
         cost = product.calculate_shipping_cost()
         print(f"{weight} kg -> ${cost:.2f}")
         assert abs(cost - expected) < 0.001
@@ -123,13 +126,17 @@ def test_json_round_trip():
     os_product = reloaded.search_product("D100")
     assert type(guitar) is PhysicalProduct and guitar.get_weight() == 3.5
     assert type(os_product) is DigitalProduct and os_product.get_download_size() == 4500
+    # Lab 8: the supplier is saved too, and products from the same supplier share one Supplier object
+    assert guitar.get_supplier().get_name() == "Acme Supplies"
+    assert guitar.get_supplier() is os_product.get_supplier()
 
 
 # Extra: records saved before Lab 7 (no "type") still load, as physical products
 def test_old_json_record_loads():
     product = product_from_dict({"id": "P001", "name": "Laptop", "price": 1200.0, "stock": 15})
     assert isinstance(product, PhysicalProduct) and product.get_weight() == 0.0
-    print("Old-format record loaded as PhysicalProduct")
+    assert product.get_supplier().get_name() == "Unknown Supplier"  # no supplier saved before Lab 8
+    print("Old-format record loaded as PhysicalProduct with Unknown Supplier")
 
 
 TESTS = [
